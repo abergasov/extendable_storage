@@ -1,12 +1,13 @@
-create table users
-(
-    u_id         uuid
-        constraint users_pk
-            primary key,
-    created_at   timestamp,
-    updated_at   timestamp,
-    user_version int default 1,
-    email        varchar,
-    user_locale  varchar,
-    user_name    varchar
+CREATE TABLE files (
+   id VARCHAR(255) PRIMARY KEY,
+   status VARCHAR(255),
+   created_at TIMESTAMPTZ,
+   updated_at TIMESTAMPTZ,
+   chunks JSONB
 );
+
+-- Create an index on the "updated_at" column
+CREATE INDEX idx_updated_at ON files(updated_at);
+
+-- Create an index on the "status" column
+CREATE INDEX idx_status ON files(status);

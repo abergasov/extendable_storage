@@ -1,13 +1,17 @@
 package testhelpers
 
 import (
+	"context"
 	"extendable_storage/internal/config"
 	"extendable_storage/internal/logger"
-	"extendable_storage/internal/repository/sampler"
-	samplerService "extendable_storage/internal/service/sampler"
+	"extendable_storage/internal/repository/file"
+	"extendable_storage/internal/service/orchestrator"
+	"extendable_storage/internal/service/receiver"
+	"extendable_storage/internal/service/storager"
 	"extendable_storage/internal/storage/database"
 	"fmt"
 	"os"
+	"time"
 
 	"strings"
 	"testing"
@@ -17,9 +21,18 @@ import (
 )
 
 type TestContainer struct {
+	Ctx    context.Context
+	Logger logger.AppLogger
+
+	RepoFile *file.Repo
+
+	ServiceOrchestrator orchestrator.DataRouter
+	ServiceReceiver     receiver.DataReceiver
+	ServiceStorage      storager.DataKeeper
 }
 
 func GetClean(t *testing.T) *TestContainer {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	conf := getTestConfig()
 	prepareTestDB(t, &conf.ConfigDB)
 
@@ -32,11 +45,26 @@ func GetClean(t *testing.T) *TestContainer {
 
 	appLog := logger.NewAppSLogger("test")
 	// repo init
-	repo := sampler.InitRepo(dbConnect)
+	repoFile := file.InitRepo(dbConnect)
 
 	// service init
-	samplerService.InitService(appLog, repo)
-	return &TestContainer{}
+	serviceDataOrchestrator := orchestrator.NewService(appLog)
+	serviceDataReceiver := receiver.NewService(ctx, appLog, serviceDataOrchestrator, repoFile)
+	serviceDataStorage := storager.NewService(appLog)
+	t.Cleanup(func() {
+		cancel()
+		serviceDataReceiver.Stop()
+	})
+	return &TestContainer{
+		Ctx:    ctx,
+		Logger: appLog,
+
+		RepoFile: repoFile,
+
+		ServiceOrchestrator: serviceDataOrchestrator,
+		ServiceReceiver:     serviceDataReceiver,
+		ServiceStorage:      serviceDataStorage,
+	}
 }
 
 func prepareTestDB(t *testing.T, cnf *config.DBConf) {
@@ -94,7 +122,7 @@ func guessMigrationDir(t *testing.T) string {
 }
 
 func cleanupDB(t *testing.T, connector database.DBConnector) {
-	tables := []string{"sampler"}
+	tables := []string{"files"}
 	for _, table := range tables {
 		_, err := connector.Client().Exec(fmt.Sprintf("TRUNCATE %s CASCADE", table))
 		require.NoError(t, err)
