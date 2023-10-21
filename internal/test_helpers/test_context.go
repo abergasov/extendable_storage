@@ -48,7 +48,7 @@ func GetClean(t *testing.T) *TestContainer {
 	repoFile := file.InitRepo(dbConnect)
 
 	// service init
-	serviceDataOrchestrator := orchestrator.NewService(appLog)
+	serviceDataOrchestrator := orchestrator.NewService(ctx, appLog)
 	serviceDataReceiver := receiver.NewService(ctx, appLog, serviceDataOrchestrator, repoFile)
 	serviceDataStorage := storager.NewService(appLog)
 	t.Cleanup(func() {

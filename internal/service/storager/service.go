@@ -22,18 +22,22 @@ func (s *Service) GetUsage() (int64, error) {
 	panic("implement me")
 }
 
-func (s *Service) GetFile(file entities.FileChunk) ([]byte, error) {
+func (s *Service) GetFile(file *entities.FileChunk) ([]byte, error) {
 	panic("implement me")
 }
 
-func (s *Service) SaveFile(file entities.FileChunk, data []byte) error {
+func (s *Service) SaveFile(file *entities.FileChunk, data []byte) error {
 	panic("implement me")
 }
 
-func (s *Service) SaveFromSource(chunks []entities.FileChunk, source string) error {
+func (s *Service) SaveFromSource(chunks []*entities.FileChunk, source string) error {
 	panic("implement me")
 }
 
-func (s *Service) CheckFilesExistence(chunks []entities.FileChunk) (map[string]bool, error) {
+func (s *Service) CheckFilesExistence(chunks []*entities.FileChunk) (map[string]bool, error) {
+	panic("implement me")
+}
+
+func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 	panic("implement me")
 }
