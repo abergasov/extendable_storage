@@ -1,0 +1,55 @@
+version: '3'
+
+volumes:
+  data_pq_volume:
+  nf_volume_data:
+  nf_conf_data:
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONF_PATH: configs/app_conf_docker.yml
+    restart: always
+    environment:
+      GIT_HASH: $GIT_HASH
+    ports:
+      - 8000:8000
+    depends_on:
+      - dbPostgres
+    networks:
+      - app-network
+    command: [ "/app/binary", "--config", "configs/app_conf_docker.yml" ]
+
+  neo4j:
+    image: neo4j:5.3.0
+    env_file:
+      - configs/neo4j.env
+    volumes:
+      - nf_volume_data:/data
+      - nf_conf_data:/conf/
+    ports:
+      - 7474:7474
+      - 7687:7687
+    networks:
+      - app-network
+    restart: on-failure
+    command: neo4j
+
+  dbPostgres:
+    image: postgres:14.2
+    env_file:
+      - configs/common.env
+    ports:
+      - "5449:5432"
+    networks:
+      - app-network
+    volumes:
+      - data_pq_volume:/var/lib/postgresql/data
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
