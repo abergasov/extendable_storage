@@ -2,8 +2,8 @@ package lru
 
 import (
 	"errors"
+	"extendable_storage/internal/storage/cache/lru/utils"
 	"fmt"
-	"go_project_template/internal/storage/cache/lru/utils"
 
 	lru "github.com/hashicorp/golang-lru"
 )

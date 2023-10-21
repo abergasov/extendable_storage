@@ -1,7 +1,7 @@
 package logger_test
 
 import (
-	"go_project_template/internal/logger"
+	"extendable_storage/internal/logger"
 	"log/slog"
 	"testing"
 )

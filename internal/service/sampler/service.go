@@ -1,8 +1,8 @@
 package sampler
 
 import (
-	"go_project_template/internal/logger"
-	"go_project_template/internal/repository/sampler"
+	"extendable_storage/internal/logger"
+	"extendable_storage/internal/repository/sampler"
 	"log/slog"
 )
 

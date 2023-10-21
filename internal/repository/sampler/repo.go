@@ -1,6 +1,6 @@
 package sampler
 
-import "go_project_template/internal/storage/database"
+import "extendable_storage/internal/storage/database"
 
 type Repo struct {
 	db database.DBConnector

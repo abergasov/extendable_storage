@@ -1,12 +1,12 @@
 package testhelpers
 
 import (
+	"extendable_storage/internal/config"
+	"extendable_storage/internal/logger"
+	"extendable_storage/internal/repository/sampler"
+	samplerService "extendable_storage/internal/service/sampler"
+	"extendable_storage/internal/storage/database"
 	"fmt"
-	"go_project_template/internal/config"
-	"go_project_template/internal/logger"
-	"go_project_template/internal/repository/sampler"
-	samplerService "go_project_template/internal/service/sampler"
-	"go_project_template/internal/storage/database"
 	"os"
 
 	"strings"

@@ -1,14 +1,14 @@
 package main
 
 import (
+	"extendable_storage/internal/config"
+	"extendable_storage/internal/logger"
+	samplerRepo "extendable_storage/internal/repository/sampler"
+	"extendable_storage/internal/routes"
+	samplerService "extendable_storage/internal/service/sampler"
+	"extendable_storage/internal/storage/database"
 	"flag"
 	"fmt"
-	"go_project_template/internal/config"
-	"go_project_template/internal/logger"
-	samplerRepo "go_project_template/internal/repository/sampler"
-	"go_project_template/internal/routes"
-	samplerService "go_project_template/internal/service/sampler"
-	"go_project_template/internal/storage/database"
 	"log/slog"
 	"os"
 	"os/signal"

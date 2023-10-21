@@ -1,4 +1,4 @@
-PROJECT_NAME:=sampler
+PROJECT_NAME:=extendable_storage
 FILE_HASH := $(shell git rev-parse HEAD)
 GOLANGCI_LINT := $(shell command -v golangci-lint 2> /dev/null)
 

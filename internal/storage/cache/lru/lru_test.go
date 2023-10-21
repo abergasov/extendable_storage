@@ -1,8 +1,8 @@
 package lru_test
 
 import (
+	"extendable_storage/internal/storage/cache/lru"
 	"fmt"
-	"go_project_template/internal/storage/cache/lru"
 	"testing"
 
 	"github.com/stretchr/testify/require"
