@@ -54,25 +54,25 @@ func (mr *MockDataKeeperMockRecorder) CheckFilesExistence(chunks any) *gomock.Ca
 }
 
 // GetFile mocks base method.
-func (m *MockDataKeeper) GetFile(file *entities.FileChunk) ([]byte, error) {
+func (m *MockDataKeeper) GetFile(chunk *entities.FileChunk) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFile", file)
+	ret := m.ctrl.Call(m, "GetFile", chunk)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetFile indicates an expected call of GetFile.
-func (mr *MockDataKeeperMockRecorder) GetFile(file any) *gomock.Call {
+func (mr *MockDataKeeperMockRecorder) GetFile(chunk any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFile", reflect.TypeOf((*MockDataKeeper)(nil).GetFile), file)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFile", reflect.TypeOf((*MockDataKeeper)(nil).GetFile), chunk)
 }
 
 // GetUsage mocks base method.
-func (m *MockDataKeeper) GetUsage() (int64, error) {
+func (m *MockDataKeeper) GetUsage() (uint64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUsage")
-	ret0, _ := ret[0].(int64)
+	ret0, _ := ret[0].(uint64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,17 +98,17 @@ func (mr *MockDataKeeperMockRecorder) PurgeFileChunks(chunks any) *gomock.Call {
 }
 
 // SaveFile mocks base method.
-func (m *MockDataKeeper) SaveFile(file *entities.FileChunk, data []byte) error {
+func (m *MockDataKeeper) SaveFile(chunk *entities.FileChunk, data []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveFile", file, data)
+	ret := m.ctrl.Call(m, "SaveFile", chunk, data)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveFile indicates an expected call of SaveFile.
-func (mr *MockDataKeeperMockRecorder) SaveFile(file, data any) *gomock.Call {
+func (mr *MockDataKeeperMockRecorder) SaveFile(chunk, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFile", reflect.TypeOf((*MockDataKeeper)(nil).SaveFile), file, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFile", reflect.TypeOf((*MockDataKeeper)(nil).SaveFile), chunk, data)
 }
 
 // SaveFromSource mocks base method.

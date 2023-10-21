@@ -14,17 +14,3 @@ func chunkData(data []byte, chunkSize int) [][]byte {
 
 	return chunks
 }
-
-func concatenateChunks(chunks [][]byte) []byte {
-	totalSize := 0
-	for _, chunk := range chunks {
-		totalSize += len(chunk)
-	}
-
-	result := make([]byte, 0, totalSize)
-
-	for _, chunk := range chunks {
-		result = append(result, chunk...)
-	}
-	return result
-}

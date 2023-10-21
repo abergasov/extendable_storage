@@ -12,11 +12,6 @@ import (
 	"sync"
 )
 
-const (
-	// chunkSize 100KB
-	chunkSize = 100 * 1024
-)
-
 type Service struct {
 	ctx    context.Context
 	wg     sync.WaitGroup
@@ -27,10 +22,10 @@ type Service struct {
 
 var _ DataReceiver = (*Service)(nil)
 
-func NewService(ctx context.Context, logger logger.AppLogger, router orchestrator.DataRouter, repo *file.Repo) *Service {
+func NewService(ctx context.Context, log logger.AppLogger, router orchestrator.DataRouter, repo *file.Repo) *Service {
 	srv := &Service{
 		ctx:    ctx,
-		logger: logger.With(slog.String("service", "receiver")),
+		logger: log.With(slog.String("service", "receiver")),
 		router: router,
 		repo:   repo,
 	}
@@ -84,7 +79,7 @@ func (s *Service) GetFile(ctx context.Context, fileID string) ([]byte, error) {
 }
 
 func (s *Service) SaveFile(ctx context.Context, fileID string, data []byte) error {
-	chunkedFile := chunkData(data, chunkSize)
+	chunkedFile := chunkData(data, entities.ChunkSize)
 
 	chunkList := make([]*entities.FileChunk, 0, len(chunkedFile))
 	for i := range chunkedFile {

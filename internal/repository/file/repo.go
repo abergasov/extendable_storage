@@ -70,12 +70,12 @@ func (r *Repo) getFiles(ctx context.Context, query string, params ...any) ([]*en
 	var result []*entities.File
 	for rows.Next() {
 		var file entities.File
-		if err = rows.StructScan(&file); err != nil {
-			return nil, err
+		if errS := rows.StructScan(&file); errS != nil {
+			return nil, errS
 		}
 		var chunks []*entities.FileChunk
-		if err = json.Unmarshal(file.ChunksJSON, &chunks); err != nil {
-			return nil, err
+		if errU := json.Unmarshal(file.ChunksJSON, &chunks); errU != nil {
+			return nil, errU
 		}
 		file.Chunks = chunks
 		result = append(result, &file)

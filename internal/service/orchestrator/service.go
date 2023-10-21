@@ -27,11 +27,11 @@ type Service struct {
 
 var _ DataRouter = (*Service)(nil)
 
-func NewService(ctx context.Context, logger logger.AppLogger) *Service {
+func NewService(ctx context.Context, log logger.AppLogger) *Service {
 	return &Service{
 		circle: NewCircle(),
 		ctx:    ctx,
-		logger: logger.With(slog.String("service", "orchestrator")),
+		logger: log.With(slog.String("service", "orchestrator")),
 	}
 }
 
@@ -98,4 +98,8 @@ func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 		return fmt.Errorf("error purge file chunks: %v", errList)
 	}
 	return nil
+}
+
+func (s *Service) MarkServerReady(serverID string) {
+	s.circle.MarkServerReady(serverID)
 }

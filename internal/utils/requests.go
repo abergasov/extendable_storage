@@ -10,7 +10,7 @@ import (
 	"github.com/google/brotli/go/cbrotli"
 )
 
-func Get(ctx context.Context, url string) ([]byte, int, error) {
+func Get(ctx context.Context, url string) (result []byte, statusCode int, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, 0, fmt.Errorf("unable to create request: %w", err)

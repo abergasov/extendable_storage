@@ -5,7 +5,6 @@ import (
 	"extendable_storage/internal/entities"
 	"extendable_storage/internal/service/storager"
 	"fmt"
-	"hash/crc32"
 	"sync"
 )
 
@@ -90,8 +89,7 @@ func (c *Circle) MarkServerReady(serverID string) {
 // GetServerForChunk returns server which can serve chunk
 // can be optimized for fewer iterations
 func (c *Circle) GetServerForChunk(chunk *entities.FileChunk) (srv storager.DataKeeper, serverID string, err error) {
-	chunkHash := crc32.ChecksumIEEE([]byte(chunk.String()))
-	circlePosition := chunkHash % circleSectors
+	circlePosition := chunk.Hash() % circleSectors
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for i := circlePosition; i < circleSectors; i++ {
@@ -118,7 +116,7 @@ func (c *Circle) GetServerForChunk(chunk *entities.FileChunk) (srv storager.Data
 }
 
 func (c *Circle) findExtendCandidate() (from, to int, err error) {
-	utilization := int64(0)
+	utilization := uint64(0)
 	candidate := 0
 	var (
 		wg      sync.WaitGroup
@@ -148,6 +146,9 @@ func (c *Circle) findExtendCandidate() (from, to int, err error) {
 		}(i)
 	}
 	wg.Wait()
+	if len(errList) > 0 {
+		return 0, 0, fmt.Errorf("error get usage: %w", errList[0])
+	}
 	prevID := 0
 	prev := c.serversMap[candidate].Prev()
 	if prev != nil {

@@ -4,6 +4,12 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
+)
+
+const (
+	// ChunkSize 100KB
+	ChunkSize = 100 * 1024
 )
 
 type FileChunk struct {
@@ -15,6 +21,10 @@ type FileChunk struct {
 
 func (f *FileChunk) String() string {
 	return f.FileID + "_" + f.ChunkID
+}
+
+func (f *FileChunk) Hash() uint32 {
+	return crc32.ChecksumIEEE([]byte(f.String()))
 }
 
 func (f *FileChunk) Value() (driver.Value, error) {

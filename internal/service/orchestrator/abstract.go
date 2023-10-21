@@ -18,4 +18,6 @@ type DataRouter interface {
 
 	// AddDataKeeper adds a new data keeper to the cluster and orchestrate rebalance
 	AddDataKeeper(serviceID string, storage storager.DataKeeper) error
+
+	MarkServerReady(serverID string)
 }

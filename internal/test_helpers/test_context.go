@@ -7,7 +7,6 @@ import (
 	"extendable_storage/internal/repository/file"
 	"extendable_storage/internal/service/orchestrator"
 	"extendable_storage/internal/service/receiver"
-	"extendable_storage/internal/service/storager"
 	"extendable_storage/internal/storage/database"
 	"fmt"
 	"os"
@@ -28,7 +27,6 @@ type TestContainer struct {
 
 	ServiceOrchestrator orchestrator.DataRouter
 	ServiceReceiver     receiver.DataReceiver
-	ServiceStorage      storager.DataKeeper
 }
 
 func GetClean(t *testing.T) *TestContainer {
@@ -50,7 +48,6 @@ func GetClean(t *testing.T) *TestContainer {
 	// service init
 	serviceDataOrchestrator := orchestrator.NewService(ctx, appLog)
 	serviceDataReceiver := receiver.NewService(ctx, appLog, serviceDataOrchestrator, repoFile)
-	serviceDataStorage := storager.NewService(appLog)
 	t.Cleanup(func() {
 		cancel()
 		serviceDataReceiver.Stop()
@@ -63,7 +60,6 @@ func GetClean(t *testing.T) *TestContainer {
 
 		ServiceOrchestrator: serviceDataOrchestrator,
 		ServiceReceiver:     serviceDataReceiver,
-		ServiceStorage:      serviceDataStorage,
 	}
 }
 
