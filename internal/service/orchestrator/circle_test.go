@@ -24,7 +24,7 @@ func TestCircle_AddServer(t *testing.T) {
 	keys := map[string]struct{}{"A": {}, "B": {}, "C": {}, "D": {}, "E": {}, "F": {}, "G": {}, "H": {}, "I": {}, "J": {}}
 	for key := range keys {
 		srv := storager.NewMockDataKeeper(mck)
-		srv.EXPECT().GetUsage().Return(uint64(randUsage()), nil).AnyTimes()
+		srv.EXPECT().GetUsage().Return(randUsage(), nil).AnyTimes()
 		_, _, _, err := circle.AddServer(fmt.Sprintf("srv%s", key), srv)
 		require.NoError(t, err)
 		circle.MarkServerReady(fmt.Sprintf("srv%s", key))
@@ -47,8 +47,8 @@ func TestCircle_AddServer(t *testing.T) {
 	})
 }
 
-func randUsage() int {
+func randUsage() float64 {
 	minNum := 10
 	maxNum := 100
-	return minNum + rand.Intn(maxNum-minNum+1)
+	return float64(minNum + rand.Intn(maxNum-minNum+1))
 }

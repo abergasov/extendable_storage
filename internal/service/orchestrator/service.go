@@ -12,7 +12,6 @@ import (
 
 const (
 	nodeStateNotReady = iota
-	nodeStatePreparing
 	nodeStateReady
 )
 

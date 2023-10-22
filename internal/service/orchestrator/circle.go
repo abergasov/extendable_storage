@@ -33,6 +33,7 @@ func NewCircle() *Circle {
 
 func (c *Circle) AddServer(serverID string, srv storager.DataKeeper) (startRange, newEndRange, oldEndRange uint32, err error) {
 	container := &dataKeeperContainer{
+		state:    nodeStateNotReady,
 		serverID: serverID,
 		storage:  srv,
 	}
