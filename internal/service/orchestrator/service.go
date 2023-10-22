@@ -36,14 +36,36 @@ func NewService(ctx context.Context, log logger.AppLogger) *Service {
 }
 
 func (s *Service) Stop() {
+	// todo add dump and restore server topology for ring
 	s.wg.Wait()
 }
 
 func (s *Service) AddDataKeeper(serviceID string, storage storager.DataKeeper) error {
-	if err := s.circle.AddServer(serviceID, storage); err != nil {
+	rangeFrom, rangeTo, oldRangeTo, err := s.circle.AddServer(serviceID, storage)
+	if err != nil {
 		return fmt.Errorf("error add server in circle map: %w", err)
 	}
 	// start rebalancing process
+	if oldRangeTo == rangeTo {
+		// no need rebalance
+		s.circle.MarkServerReady(serviceID)
+		return nil
+	}
+	// new server need get all files in range [rangeFrom, rangeTo]
+	// request them from server with id = [rangeFrom, oldRangeTo]
+	sourceSrv, _, err := s.circle.GetServerForPosition(rangeTo)
+	if err != nil {
+		return fmt.Errorf("error get server for position: %w", err)
+	}
+	if err = storage.SaveFromSource(rangeFrom, rangeTo, sourceSrv); err != nil {
+		return fmt.Errorf("error save from source: %w", err)
+	}
+	s.logger.Info("rebalance finished", slog.String("service_id", serviceID))
+	s.circle.MarkServerReady(serviceID)
+	if err = sourceSrv.DropChunksInRange(rangeFrom, rangeTo); err != nil {
+		// todo move this to background process with retry logic
+		return fmt.Errorf("error drop chunks in range: %w", err)
+	}
 	return nil
 }
 
@@ -65,7 +87,7 @@ func (s *Service) SaveFileChunk(chunk *entities.FileChunk, data []byte) error {
 
 func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 	requests := make(map[string][]*entities.FileChunk, len(chunks))
-	srvs := make(map[string]storager.DataKeeper, circleSectors)
+	srvs := make(map[string]storager.DataKeeper, entities.CircleSectors)
 	for _, chunk := range chunks {
 		srv, srvID, err := s.circle.GetServerForChunk(chunk)
 		if err != nil {
@@ -98,8 +120,4 @@ func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 		return fmt.Errorf("error purge file chunks: %v", errList)
 	}
 	return nil
-}
-
-func (s *Service) MarkServerReady(serverID string) {
-	s.circle.MarkServerReady(serverID)
 }

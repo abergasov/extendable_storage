@@ -35,9 +35,6 @@ func TestSaveData(t *testing.T) {
 	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("A", srvA))
 	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("B", srvB))
 	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("C", srvC))
-	container.ServiceOrchestrator.MarkServerReady("A")
-	container.ServiceOrchestrator.MarkServerReady("B")
-	container.ServiceOrchestrator.MarkServerReady("C")
 
 	// when
 	for id, data := range dataMap {
@@ -59,4 +56,48 @@ func TestSaveData(t *testing.T) {
 	usageC, err := srvC.GetUsage()
 	require.NoError(t, err)
 	t.Logf("C usage: %d", usageC)
+	t.Run("data should be rebalanced after new server added", func(t *testing.T) {
+		// given
+		srvD := storager.NewService(container.Ctx, &storager.Config{
+			MaxLimitMB: 15,
+			NodeID:     "D",
+			DataDir:    t.TempDir(),
+		}, container.Logger)
+		require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("D", srvD))
+
+		srvF := storager.NewService(container.Ctx, &storager.Config{
+			MaxLimitMB: 10,
+			NodeID:     "F",
+			DataDir:    t.TempDir(),
+		}, container.Logger)
+		require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("F", srvF))
+
+		// when
+		for id, data := range dataMap {
+			require.ErrorContains(t, container.ServiceReceiver.SaveFile(container.Ctx, id, data), "file already exists")
+		}
+
+		// then
+		for id, data := range dataMap {
+			receivedData, err := container.ServiceReceiver.GetFile(container.Ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, data, receivedData)
+		}
+		usageAAfter, err := srvA.GetUsage()
+		require.NoError(t, err)
+		t.Logf("A usage: %d", usageAAfter)
+		usageBAfter, err := srvB.GetUsage()
+		require.NoError(t, err)
+		t.Logf("B usage: %d", usageBAfter)
+		usageCAfter, err := srvC.GetUsage()
+		require.NoError(t, err)
+		t.Logf("C usage: %d", usageCAfter)
+		require.True(t, usageAAfter < usageA || usageBAfter < usageB || usageCAfter < usageC)
+		usageD, err := srvD.GetUsage()
+		require.NoError(t, err)
+		t.Logf("D usage: %d", usageD)
+		usageF, err := srvD.GetUsage()
+		require.NoError(t, err)
+		t.Logf("F usage: %d", usageF)
+	})
 }

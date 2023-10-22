@@ -2,6 +2,8 @@ package receiver
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"extendable_storage/internal/entities"
 	"extendable_storage/internal/logger"
 	"extendable_storage/internal/repository/file"
@@ -79,6 +81,13 @@ func (s *Service) GetFile(ctx context.Context, fileID string) ([]byte, error) {
 }
 
 func (s *Service) SaveFile(ctx context.Context, fileID string, data []byte) error {
+	chunks, err := s.repo.GetFileChunks(ctx, fileID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("error check file exists: %w", err)
+	}
+	if len(chunks) > 0 {
+		return fmt.Errorf("file already exists")
+	}
 	chunkedFile := chunkData(data, entities.ChunkSize)
 
 	chunkList := make([]*entities.FileChunk, 0, len(chunkedFile))

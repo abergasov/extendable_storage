@@ -17,7 +17,11 @@ type DataKeeper interface {
 	SaveFile(chunk *entities.FileChunk, data []byte) error
 
 	// SaveFromSource command to load batch of data from external source.
-	SaveFromSource(chunks []*entities.FileChunk, source string) error
+	SaveFromSource(chunksFrom, chunksTo uint32, source DataKeeper) error
+	// ServeChunksInRange command to get batch of data from external source.
+	ServeChunksInRange(chunksRange uint32) (data []byte, checkSum int32, err error)
+	// DropChunksInRange command to drop batch of data from external source.
+	DropChunksInRange(chunksFrom, chunksTo uint32) error
 	// CheckFilesExistence returns a map of fileIDs and their existence in the storage
 	CheckFilesExistence(chunks []*entities.FileChunk) (map[string]bool, error)
 	// PurgeFileChunks command to purge file chunks

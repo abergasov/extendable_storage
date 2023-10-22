@@ -8,13 +8,9 @@ import (
 	"sync"
 )
 
-const (
-	circleSectors = 360
-)
-
 type dataKeeperContainer struct {
 	state    int
-	position int
+	position uint32
 	serverID string
 	storage  storager.DataKeeper
 }
@@ -22,20 +18,20 @@ type dataKeeperContainer struct {
 type Circle struct {
 	mu            sync.RWMutex
 	serversList   *list.List
-	serversMap    map[int]*list.Element
+	serversMap    map[uint32]*list.Element
 	servers       []*dataKeeperContainer
 	activeServers int
 }
 
 func NewCircle() *Circle {
 	return &Circle{
-		servers:     make([]*dataKeeperContainer, circleSectors),
-		serversMap:  make(map[int]*list.Element),
+		servers:     make([]*dataKeeperContainer, entities.CircleSectors),
+		serversMap:  make(map[uint32]*list.Element),
 		serversList: list.New(),
 	}
 }
 
-func (c *Circle) AddServer(serverID string, srv storager.DataKeeper) error {
+func (c *Circle) AddServer(serverID string, srv storager.DataKeeper) (startRange, newEndRange, oldEndRange uint32, err error) {
 	container := &dataKeeperContainer{
 		serverID: serverID,
 		storage:  srv,
@@ -48,6 +44,9 @@ func (c *Circle) AddServer(serverID string, srv storager.DataKeeper) error {
 		c.serversMap[container.position] = el
 		c.servers[container.position] = container
 		c.mu.Unlock()
+		startRange = 0
+		newEndRange = container.position
+		oldEndRange = container.position
 	case 1:
 		c.mu.Lock()
 		container.position = 180 - 1
@@ -55,21 +54,27 @@ func (c *Circle) AddServer(serverID string, srv storager.DataKeeper) error {
 		c.serversMap[container.position] = el
 		c.servers[container.position] = container
 		c.mu.Unlock()
+		startRange = 0
+		newEndRange = container.position
+		oldEndRange = 360 - 1
 	default:
 		from, to, err := c.findExtendCandidate()
 		if err != nil {
-			return fmt.Errorf("error find extend candidate: %w", err)
+			return 0, 0, 0, fmt.Errorf("error find extend candidate: %w", err)
 		}
 		position := (from + to) / 2
 		container.position = position
 		el := c.serversList.InsertBefore(container, c.serversMap[to])
 		c.serversMap[position] = el
 		c.servers[position] = container
+		newEndRange = position
+		startRange = from
+		oldEndRange = to
 	}
 	c.mu.Lock()
 	c.activeServers++
 	c.mu.Unlock()
-	return nil
+	return startRange, newEndRange, oldEndRange, nil
 }
 
 func (c *Circle) MarkServerReady(serverID string) {
@@ -89,10 +94,14 @@ func (c *Circle) MarkServerReady(serverID string) {
 // GetServerForChunk returns server which can serve chunk
 // can be optimized for fewer iterations
 func (c *Circle) GetServerForChunk(chunk *entities.FileChunk) (srv storager.DataKeeper, serverID string, err error) {
-	circlePosition := chunk.Hash() % circleSectors
+	circlePosition := chunk.Hash() % entities.CircleSectors
+	return c.GetServerForPosition(circlePosition)
+}
+
+func (c *Circle) GetServerForPosition(circlePosition uint32) (srv storager.DataKeeper, serverID string, err error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	for i := circlePosition; i < circleSectors; i++ {
+	for i := circlePosition; i < entities.CircleSectors; i++ {
 		if c.servers[i] == nil {
 			continue
 		}
@@ -115,9 +124,9 @@ func (c *Circle) GetServerForChunk(chunk *entities.FileChunk) (srv storager.Data
 	return nil, "", fmt.Errorf("no servers in circle")
 }
 
-func (c *Circle) findExtendCandidate() (from, to int, err error) {
+func (c *Circle) findExtendCandidate() (from, to uint32, err error) {
 	utilization := uint64(0)
-	candidate := 0
+	candidate := uint32(0)
 	var (
 		wg      sync.WaitGroup
 		errList = make([]error, 0, len(c.servers))
@@ -140,7 +149,7 @@ func (c *Circle) findExtendCandidate() (from, to int, err error) {
 			c.mu.Lock()
 			if usage >= utilization {
 				utilization = usage
-				candidate = j
+				candidate = uint32(j)
 			}
 			c.mu.Unlock()
 		}(i)
@@ -149,7 +158,7 @@ func (c *Circle) findExtendCandidate() (from, to int, err error) {
 	if len(errList) > 0 {
 		return 0, 0, fmt.Errorf("error get usage: %w", errList[0])
 	}
-	prevID := 0
+	prevID := uint32(0)
 	prev := c.serversMap[candidate].Prev()
 	if prev != nil {
 		prevID = prev.Value.(*dataKeeperContainer).position

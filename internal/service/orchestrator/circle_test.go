@@ -25,7 +25,8 @@ func TestCircle_AddServer(t *testing.T) {
 	for key := range keys {
 		srv := storager.NewMockDataKeeper(mck)
 		srv.EXPECT().GetUsage().Return(uint64(randUsage()), nil).AnyTimes()
-		require.NoError(t, circle.AddServer(fmt.Sprintf("srv%s", key), srv))
+		_, _, _, err := circle.AddServer(fmt.Sprintf("srv%s", key), srv)
+		require.NoError(t, err)
 		circle.MarkServerReady(fmt.Sprintf("srv%s", key))
 	}
 

@@ -53,6 +53,20 @@ func (mr *MockDataKeeperMockRecorder) CheckFilesExistence(chunks any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckFilesExistence", reflect.TypeOf((*MockDataKeeper)(nil).CheckFilesExistence), chunks)
 }
 
+// DropChunksInRange mocks base method.
+func (m *MockDataKeeper) DropChunksInRange(chunksFrom, chunksTo uint32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DropChunksInRange", chunksFrom, chunksTo)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DropChunksInRange indicates an expected call of DropChunksInRange.
+func (mr *MockDataKeeperMockRecorder) DropChunksInRange(chunksFrom, chunksTo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DropChunksInRange", reflect.TypeOf((*MockDataKeeper)(nil).DropChunksInRange), chunksFrom, chunksTo)
+}
+
 // GetFile mocks base method.
 func (m *MockDataKeeper) GetFile(chunk *entities.FileChunk) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -112,15 +126,31 @@ func (mr *MockDataKeeperMockRecorder) SaveFile(chunk, data any) *gomock.Call {
 }
 
 // SaveFromSource mocks base method.
-func (m *MockDataKeeper) SaveFromSource(chunks []*entities.FileChunk, source string) error {
+func (m *MockDataKeeper) SaveFromSource(chunksFrom, chunksTo uint32, source DataKeeper) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveFromSource", chunks, source)
+	ret := m.ctrl.Call(m, "SaveFromSource", chunksFrom, chunksTo, source)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveFromSource indicates an expected call of SaveFromSource.
-func (mr *MockDataKeeperMockRecorder) SaveFromSource(chunks, source any) *gomock.Call {
+func (mr *MockDataKeeperMockRecorder) SaveFromSource(chunksFrom, chunksTo, source any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFromSource", reflect.TypeOf((*MockDataKeeper)(nil).SaveFromSource), chunks, source)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFromSource", reflect.TypeOf((*MockDataKeeper)(nil).SaveFromSource), chunksFrom, chunksTo, source)
+}
+
+// ServeChunksInRange mocks base method.
+func (m *MockDataKeeper) ServeChunksInRange(chunksRange uint32) ([]byte, int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServeChunksInRange", chunksRange)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(int32)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ServeChunksInRange indicates an expected call of ServeChunksInRange.
+func (mr *MockDataKeeperMockRecorder) ServeChunksInRange(chunksRange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServeChunksInRange", reflect.TypeOf((*MockDataKeeper)(nil).ServeChunksInRange), chunksRange)
 }

@@ -33,6 +33,7 @@ type Service struct {
 var _ DataKeeper = (*Service)(nil)
 
 func NewService(ctx context.Context, conf *Config, log logger.AppLogger) *Service {
+	// todo add check for data dir exist for calculate usage
 	return &Service{
 		ctx:         ctx,
 		conf:        conf,
@@ -54,7 +55,7 @@ func (s *Service) GetFile(chunk *entities.FileChunk) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error create dir for file getting: %w", err)
 	}
-	return s.getFileContent(filePath)
+	return s.getFileContent(filePath, true)
 }
 
 func (s *Service) SaveFile(chunk *entities.FileChunk, data []byte) error {
@@ -74,8 +75,125 @@ func (s *Service) SaveFile(chunk *entities.FileChunk, data []byte) error {
 	return nil
 }
 
-func (s *Service) SaveFromSource(chunks []*entities.FileChunk, source string) error {
-	panic("implement me")
+func (s *Service) SaveFromSource(chunksFrom, chunksTo uint32, source DataKeeper) error {
+	var (
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+		errList = make([]error, 0, chunksTo-chunksFrom)
+	)
+	s.logger.Info("start save from source", slog.Int64("from", int64(chunksFrom)), slog.Int64("to", int64(chunksTo)))
+	for i := chunksFrom; i < chunksTo; i++ {
+		wg.Add(1)
+		go func(j uint32) {
+			defer wg.Done()
+			data, checkSum, err := source.ServeChunksInRange(j)
+			if err != nil {
+				s.logger.Error("error get file from source", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("error get file from source for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			if checkSum == -1 {
+				return // no data in this range
+			}
+			dataPath, zipPath, err := s.predictZipPath(s.conf, j)
+			if err != nil {
+				s.logger.Error("error create dir for file saving", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("error create dir for file saving for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			if err = s.saveToFile(zipPath+"1_tmp.zip", data); err != nil {
+				s.logger.Error("error save file", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("error save file for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			savedChecksum, err := CalculateCRC32(zipPath + "1_tmp.zip")
+			if err != nil {
+				s.logger.Error("error calculate checksum", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("error calculate checksum for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			if savedChecksum != uint32(checkSum) {
+				s.logger.Error("checksum mismatch", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("checksum mismatch for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			if err = UnpackZip(zipPath+"1_tmp.zip", dataPath); err != nil {
+				s.logger.Error("error unpack zip", err)
+				mu.Lock()
+				errList = append(errList, fmt.Errorf("error unpack zip for %d: %w", j, err))
+				mu.Unlock()
+				return
+			}
+			s.logger.Info("file saved", slog.Int64("position", int64(j)))
+		}(i)
+	}
+	wg.Wait()
+	if len(errList) > 0 {
+		return fmt.Errorf("error save from source: %w", errList[0])
+	}
+	return nil
+}
+
+func (s *Service) DropChunksInRange(chunksFrom, chunksTo uint32) error {
+	for i := chunksFrom; i < chunksTo; i++ {
+		dataPath, _, err := s.predictZipPath(s.conf, i)
+		if err != nil {
+			return fmt.Errorf("error create dir for file saving: %w", err)
+		}
+		dataExist, err := s.checkDirExist(dataPath)
+		if err != nil {
+			return fmt.Errorf("error check dir exist: %w", err)
+		}
+		if !dataExist {
+			continue
+		}
+
+		removedSize, err := deleteFolderAndCalculateSize(dataPath)
+		if err != nil {
+			return fmt.Errorf("error delete folder %d: %v", i, err)
+		}
+		s.mu.Lock()
+		s.currentUsage -= uint64(removedSize)
+		s.mu.Unlock()
+	}
+	return nil
+}
+
+func (s *Service) ServeChunksInRange(chunksRange uint32) (data []byte, checkSum int32, err error) {
+	dataPath, zipPath, err := s.predictZipPath(s.conf, chunksRange)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error create dir for file saving: %w", err)
+	}
+	defer s.deleteFile(zipPath)
+
+	// check folder exist
+	dataExist, err := s.checkDirExist(dataPath)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error check dir exist: %w", err)
+	}
+	if !dataExist {
+		return nil, -1, nil
+	}
+
+	checkSumTmp, err := ZipAndCalculateCRC32(dataPath, zipPath)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error zip file: %w", err)
+	}
+	data, err = s.getFileContent(zipPath, false)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error get file content: %w", err)
+	}
+	return data, int32(checkSumTmp), nil
 }
 
 func (s *Service) CheckFilesExistence(chunks []*entities.FileChunk) (map[string]bool, error) {
@@ -87,10 +205,18 @@ func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 }
 
 func (s *Service) predictFilePath(conf *Config, chunk *entities.FileChunk) (filePath string, err error) {
-	parentDir := conf.DataDir + "/" + utils.HashString(chunk.String())[:4]
+	parentDir := fmt.Sprintf("%s/%d/%s", conf.DataDir, chunk.Hash()%entities.CircleSectors, utils.HashString(chunk.String())[:4])
 	filePath = parentDir + "/" + utils.HashString(chunk.String())
-	if err := s.createDirIfNotExist(parentDir); err != nil {
+	if err = s.createDirIfNotExist(parentDir); err != nil {
 		return "", fmt.Errorf("error create dir for file saving: %w", err)
 	}
 	return filePath, nil
+}
+
+func (s *Service) predictZipPath(conf *Config, positionID uint32) (dataPath, zipPath string, err error) {
+	zipPath = fmt.Sprintf("%s/zip/%d/", conf.DataDir, positionID)
+	if err = s.createDirIfNotExist(zipPath); err != nil {
+		return "", "", fmt.Errorf("error create dir for file saving: %w", err)
+	}
+	return fmt.Sprintf("%s/%d/", conf.DataDir, positionID), fmt.Sprintf("%s%d.zip", zipPath, positionID), nil
 }
