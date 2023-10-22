@@ -38,21 +38,6 @@ func (m *MockDataKeeper) EXPECT() *MockDataKeeperMockRecorder {
 	return m.recorder
 }
 
-// CheckFilesExistence mocks base method.
-func (m *MockDataKeeper) CheckFilesExistence(chunks []*entities.FileChunk) (map[string]bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckFilesExistence", chunks)
-	ret0, _ := ret[0].(map[string]bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CheckFilesExistence indicates an expected call of CheckFilesExistence.
-func (mr *MockDataKeeperMockRecorder) CheckFilesExistence(chunks any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckFilesExistence", reflect.TypeOf((*MockDataKeeper)(nil).CheckFilesExistence), chunks)
-}
-
 // DropChunksInRange mocks base method.
 func (m *MockDataKeeper) DropChunksInRange(chunksFrom, chunksTo uint32) error {
 	m.ctrl.T.Helper()
@@ -83,10 +68,10 @@ func (mr *MockDataKeeperMockRecorder) GetFile(chunk any) *gomock.Call {
 }
 
 // GetUsage mocks base method.
-func (m *MockDataKeeper) GetUsage() (uint64, error) {
+func (m *MockDataKeeper) GetUsage() (float64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUsage")
-	ret0, _ := ret[0].(uint64)
+	ret0, _ := ret[0].(float64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

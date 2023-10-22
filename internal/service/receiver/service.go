@@ -88,7 +88,7 @@ func (s *Service) SaveFile(ctx context.Context, fileID string, data []byte) erro
 	if len(chunks) > 0 {
 		return fmt.Errorf("file already exists")
 	}
-	chunkedFile := chunkData(data, entities.ChunkSize)
+	chunkedFile := chunkData(data, 6)
 
 	chunkList := make([]*entities.FileChunk, 0, len(chunkedFile))
 	for i := range chunkedFile {

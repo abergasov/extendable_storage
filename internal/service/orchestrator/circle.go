@@ -125,7 +125,7 @@ func (c *Circle) GetServerForPosition(circlePosition uint32) (srv storager.DataK
 }
 
 func (c *Circle) findExtendCandidate() (from, to uint32, err error) {
-	utilization := uint64(0)
+	utilization := float64(0)
 	candidate := uint32(0)
 	var (
 		wg      sync.WaitGroup

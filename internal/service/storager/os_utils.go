@@ -2,20 +2,16 @@ package storager
 
 import (
 	"archive/zip"
-	"errors"
-	"extendable_storage/internal/entities"
 	"fmt"
 	"hash/crc32"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 var (
-	errFileToLarge = errors.New("file size exceeds the limit")
-	maxSize        = int64(100 * 1024 * 1024) // Set the maximum allowed file size (e.g., 100 MB)
+	maxSize = int64(100 * 1024 * 1024) // Set the maximum allowed file size (e.g., 100 MB)
 )
 
 func (s *Service) createDirIfNotExist(path string) error {
@@ -36,46 +32,15 @@ func (s *Service) checkDirExist(path string) (bool, error) {
 	return true, err
 }
 
-func (s *Service) getFileContent(filePath string, checkLimit bool) ([]byte, error) {
-	fileInfo, err := os.Stat(filePath)
+func deleteFolderAndCalculateSize(folderPath string) (uint64, error) {
+	size, err := calculateFolderSize(folderPath)
 	if err != nil {
-		return nil, err
-	}
-
-	// Check if the file size exceeds the limit
-	if checkLimit && fileInfo.Size() > entities.ChunkSize {
-		s.logger.With(
-			slog.Int("limit", entities.ChunkSize),
-			slog.Int64("file_size", fileInfo.Size()),
-		).Error("file size exceeds the limit", errFileToLarge)
-		return nil, errFileToLarge
-	}
-	return os.ReadFile(filePath)
-}
-
-func (s *Service) saveToFile(filePath string, data []byte) error {
-	err := os.WriteFile(filePath, data, 0600)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func deleteFolderAndCalculateSize(folderPath string) (int64, error) {
-	dir, err := os.Open(folderPath)
-	if err != nil {
-		return 0, err
-	}
-	defer dir.Close()
-
-	fileInfo, err := dir.Stat()
-	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error calculate folder size: %w", err)
 	}
 	if err := os.RemoveAll(folderPath); err != nil {
 		return 0, err
 	}
-	return fileInfo.Size(), nil
+	return size, nil
 }
 
 func (s *Service) deleteFile(filePath string) {
@@ -248,4 +213,24 @@ func extractFile(file *zip.File, targetDir string) error {
 		return err
 	}
 	return nil
+}
+
+func calculateFolderSize(folderPath string) (totalSize uint64, err error) {
+	err = filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// If it's a file, add its size to the total
+		if !info.IsDir() {
+			totalSize += uint64(info.Size())
+		}
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return totalSize, nil
 }

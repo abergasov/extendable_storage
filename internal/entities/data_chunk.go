@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	// ChunkSize 100KB
-	ChunkSize     = 100 * 1024
 	CircleSectors = 360
 )
 

@@ -9,7 +9,7 @@ type DataKeeper interface {
 	// GetUsage returns the amount of data stored in percentage of usage. 0 - 100
 	// this metric is used to determine the most used node in the cluster.
 	// New node candidate will be added to the cluster to balance the usage.
-	GetUsage() (uint64, error)
+	GetUsage() (float64, error)
 
 	// GetFile returns a file by its ID and hash. ID is user defined, hash is calculated by the system
 	GetFile(chunk *entities.FileChunk) ([]byte, error)
@@ -22,8 +22,6 @@ type DataKeeper interface {
 	ServeChunksInRange(chunksRange uint32) (data []byte, checkSum int32, err error)
 	// DropChunksInRange command to drop batch of data from external source.
 	DropChunksInRange(chunksFrom, chunksTo uint32) error
-	// CheckFilesExistence returns a map of fileIDs and their existence in the storage
-	CheckFilesExistence(chunks []*entities.FileChunk) (map[string]bool, error)
-	// PurgeFileChunks command to purge file chunks
+	// PurgeFileChunks command to purge file chunks in case of broken upload
 	PurgeFileChunks(chunks []*entities.FileChunk) error
 }

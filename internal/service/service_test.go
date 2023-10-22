@@ -13,33 +13,30 @@ func TestSaveData(t *testing.T) {
 	// given
 	dataMap := map[string][]byte{
 		uuid.NewString(): testhelpers.GenerateMBData(t, 1),
-		uuid.NewString(): testhelpers.GenerateMBData(t, 3.1),
-		uuid.NewString(): testhelpers.GenerateMBData(t, 4.2),
+		uuid.NewString(): testhelpers.GenerateMBData(t, 2.1),
+		uuid.NewString(): testhelpers.GenerateMBData(t, 3.2),
 	}
 	container := testhelpers.GetClean(t)
-	srvA := storager.NewService(container.Ctx, &storager.Config{
-		MaxLimitMB: 10,
-		NodeID:     "A",
-		DataDir:    t.TempDir(),
-	}, container.Logger)
-	srvB := storager.NewService(container.Ctx, &storager.Config{
-		MaxLimitMB: 7,
-		NodeID:     "B",
-		DataDir:    t.TempDir(),
-	}, container.Logger)
-	srvC := storager.NewService(container.Ctx, &storager.Config{
-		MaxLimitMB: 15,
-		NodeID:     "C",
-		DataDir:    t.TempDir(),
-	}, container.Logger)
-	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("A", srvA))
-	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("B", srvB))
-	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("C", srvC))
+	storageClusterUsage := map[string]float64{
+		"NODE_A": 0,
+		"NODE_B": 0,
+		"NODE_C": 0,
+		"NODE_D": 0,
+		"NODE_E": 0,
+		"NODE_F": 0,
+	}
+	storageClusters := make(map[string]storager.DataKeeper)
+	for storageName := range storageClusterUsage {
+		srv := addStorage(t, container, storageName, 6)
+		storageClusters[storageName] = srv
+	}
+	container.ServiceOrchestrator.PrintServerPositions()
 
 	// when
 	for id, data := range dataMap {
 		require.NoError(t, container.ServiceReceiver.SaveFile(container.Ctx, id, data))
 	}
+	t.Logf("data saved")
 
 	// then
 	for id, data := range dataMap {
@@ -47,30 +44,19 @@ func TestSaveData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, data, receivedData)
 	}
-	usageA, err := srvA.GetUsage()
-	require.NoError(t, err)
-	t.Logf("A usage: %d", usageA)
-	usageB, err := srvB.GetUsage()
-	require.NoError(t, err)
-	t.Logf("B usage: %d", usageB)
-	usageC, err := srvC.GetUsage()
-	require.NoError(t, err)
-	t.Logf("C usage: %d", usageC)
+
+	for storageName, srv := range storageClusters {
+		usage, err := srv.GetUsage()
+		require.NoError(t, err)
+		storageClusterUsage[storageName] = usage
+		t.Logf("%s usage: %.2f", storageName, usage)
+	}
+
 	t.Run("data should be rebalanced after new server added", func(t *testing.T) {
 		// given
-		srvD := storager.NewService(container.Ctx, &storager.Config{
-			MaxLimitMB: 15,
-			NodeID:     "D",
-			DataDir:    t.TempDir(),
-		}, container.Logger)
-		require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("D", srvD))
-
-		srvF := storager.NewService(container.Ctx, &storager.Config{
-			MaxLimitMB: 10,
-			NodeID:     "F",
-			DataDir:    t.TempDir(),
-		}, container.Logger)
-		require.NoError(t, container.ServiceOrchestrator.AddDataKeeper("F", srvF))
+		srvG := addStorage(t, container, "NODE_G", 10)
+		srvH := addStorage(t, container, "NODE_H", 10)
+		container.ServiceOrchestrator.PrintServerPositions()
 
 		// when
 		for id, data := range dataMap {
@@ -80,24 +66,37 @@ func TestSaveData(t *testing.T) {
 		// then
 		for id, data := range dataMap {
 			receivedData, err := container.ServiceReceiver.GetFile(container.Ctx, id)
+			if err != nil {
+				container.ServiceOrchestrator.PrintServerPositions()
+			}
 			require.NoError(t, err)
 			require.Equal(t, data, receivedData)
 		}
-		usageAAfter, err := srvA.GetUsage()
+
+		counter := 0
+		for node, usage := range storageClusterUsage {
+			newUsage, err := storageClusters[node].GetUsage()
+			require.NoError(t, err)
+			if newUsage != usage {
+				counter++
+			}
+		}
+		require.True(t, counter > 0)
+		usageG, err := srvG.GetUsage()
 		require.NoError(t, err)
-		t.Logf("A usage: %d", usageAAfter)
-		usageBAfter, err := srvB.GetUsage()
+		t.Logf("G usage: %.2f", usageG)
+		usageH, err := srvH.GetUsage()
 		require.NoError(t, err)
-		t.Logf("B usage: %d", usageBAfter)
-		usageCAfter, err := srvC.GetUsage()
-		require.NoError(t, err)
-		t.Logf("C usage: %d", usageCAfter)
-		require.True(t, usageAAfter < usageA || usageBAfter < usageB || usageCAfter < usageC)
-		usageD, err := srvD.GetUsage()
-		require.NoError(t, err)
-		t.Logf("D usage: %d", usageD)
-		usageF, err := srvD.GetUsage()
-		require.NoError(t, err)
-		t.Logf("F usage: %d", usageF)
+		t.Logf("H usage: %.2f", usageH)
 	})
+}
+
+func addStorage(t *testing.T, container *testhelpers.TestContainer, name string, maxLimitMB int) storager.DataKeeper {
+	srv := storager.NewService(container.Ctx, &storager.Config{
+		MaxLimitMB: maxLimitMB,
+		NodeID:     name,
+		DataDir:    t.TempDir(),
+	}, container.Logger)
+	require.NoError(t, container.ServiceOrchestrator.AddDataKeeper(name, srv))
+	return srv
 }

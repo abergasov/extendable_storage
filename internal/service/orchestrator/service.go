@@ -121,3 +121,7 @@ func (s *Service) PurgeFileChunks(chunks []*entities.FileChunk) error {
 	}
 	return nil
 }
+
+func (s *Service) PrintServerPositions() {
+	s.circle.PrintServerPositions()
+}

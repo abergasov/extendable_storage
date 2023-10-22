@@ -1,15 +1,23 @@
 package receiver
 
-func chunkData(data []byte, chunkSize int) [][]byte {
-	var chunks [][]byte
+func chunkData(data []byte, numChunks int) [][]byte {
+	// Calculate the size of each chunk
+	chunkSize := len(data) / numChunks
 
-	for i := 0; i < len(data); i += chunkSize {
-		end := i + chunkSize
-		if end > len(data) {
+	// Create a slice to hold the chunks
+	chunks := make([][]byte, numChunks)
+
+	// Split the data into equal-sized chunks
+	for i := 0; i < numChunks; i++ {
+		start := i * chunkSize
+		var end int
+		if i == numChunks-1 {
+			// Last chunk may be smaller if the data size is not divisible
 			end = len(data)
+		} else {
+			end = (i + 1) * chunkSize
 		}
-		chunk := data[i:end]
-		chunks = append(chunks, chunk)
+		chunks[i] = data[start:end]
 	}
 
 	return chunks
